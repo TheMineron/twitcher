@@ -1,0 +1,88 @@
+{% extends "jwt_auth/base.html" %}
+
+{% block title %}Вход в Twitcher{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-header">
+        <div class="auth-logo">Twitcher</div>
+        <h2>Вход в аккаунт</h2>
+    </div>
+    
+    <div id="error-message" class="alert alert-danger d-none"></div>
+    
+    <form id="login-form" class="auth-form" method="post">
+        <div class="mb-3">
+            <label for="username" class="form-label">Имя пользователя</label>
+            <input type="text" name="username" class="form-control" id="username" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="password" class="form-label">Пароль</label>
+            <input type="password" name="password" class="form-control" id="password" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary auth-btn" id="login-btn">
+            <span id="login-text">Войти</span>
+            <span id="login-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+        </button>
+        
+        <div class="auth-footer">
+            <p>Ещё нет аккаунта? <a href="{% url 'register' %}">Зарегистрироваться</a></p>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('login-form');
+    const errorMessage = document.getElementById('error-message');
+    const loginBtn = document.getElementById('login-btn');
+    const loginText = document.getElementById('login-text');
+    const loginSpinner = document.getElementById('login-spinner');
+    
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        loginText.classList.add('d-none');
+        loginSpinner.classList.remove('d-none');
+        loginBtn.disabled = true;
+        errorMessage.classList.add('d-none');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const nextUrl = urlParams.get('next') || '/';
+        
+        try {
+            const response = await fetch('/api/auth/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                localStorage.setItem('access_token', data.access);
+                localStorage.setItem('refresh_token', data.refresh);
+                window.location.href = nextUrl;
+            } else {
+                errorMessage.textContent = data.detail || 'Неверное имя пользователя или пароль';
+                errorMessage.classList.remove('d-none');
+            }
+        } catch (error) {
+            errorMessage.textContent = 'Ошибка соединения с сервером';
+            errorMessage.classList.remove('d-none');
+        } finally {
+            loginText.classList.remove('d-none');
+            loginSpinner.classList.add('d-none');
+            loginBtn.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}

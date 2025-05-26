@@ -1,0 +1,151 @@
+{% extends "jwt_auth/base.html" %}
+
+{% block title %}Регистрация в Twitcher{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-header">
+        <div class="auth-logo">Twitcher</div>
+        <h2>Создать аккаунт</h2>
+    </div>
+    
+    <div id="error-message" class="alert alert-danger d-none"></div>
+    
+    <form id="register-form" class="auth-form">
+        <div class="mb-3">
+            <label for="username" class="form-label">Имя пользователя</label>
+            <input type="text" name="username" class="form-control" id="username" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" id="email" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="phone" class="form-label">Телефон (необязательно)</label>
+            <input type="text" name="phone" class="form-control" id="phone">
+        </div>
+        
+        <div class="mb-3">
+            <label for="first_name" class="form-label">Имя (необязательно)</label>
+            <input type="text" name="first_name" class="form-control" id="first_name">
+        </div>
+        
+        <div class="mb-3">
+            <label for="last_name" class="form-label">Фамилия (необязательно)</label>
+            <input type="text" name="last_name" class="form-control" id="last_name">
+        </div>
+        
+        <div class="mb-3">
+            <label for="password1" class="form-label">Пароль</label>
+            <input type="password" name="password1" class="form-control" id="password1" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="password2" class="form-label">Подтверждение пароля</label>
+            <input type="password" name="password2" class="form-control" id="password2" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary auth-btn" id="register-btn">
+            <span id="register-text">Зарегистрироваться</span>
+            <span id="register-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+        </button>
+        
+        <div class="auth-footer">
+            <p>Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a></p>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const registerForm = document.getElementById('register-form');
+    const errorMessage = document.getElementById('error-message');
+    const registerBtn = document.getElementById('register-btn');
+    const registerText = document.getElementById('register-text');
+    const registerSpinner = document.getElementById('register-spinner');
+    
+    registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        registerText.classList.add('d-none');
+        registerSpinner.classList.remove('d-none');
+        registerBtn.disabled = true;
+        errorMessage.classList.add('d-none');
+        
+        try {
+            const response = await fetch('/api/auth/register/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value || '',
+                    first_name: document.getElementById('first_name').value || '',
+                    last_name: document.getElementById('last_name').value || '',
+                    password1: document.getElementById('password1').value,
+                    password2: document.getElementById('password2').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                const loginResponse = await fetch('/api/auth/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password1').value
+                    })
+                });
+                
+                const loginData = await loginResponse.json();
+                
+                if (loginResponse.ok) {
+                    localStorage.setItem('access_token', loginData.access);
+                    localStorage.setItem('refresh_token', loginData.refresh);
+                    
+                    window.location.href = '/';
+                } else {
+                    errorMessage.textContent = 'Регистрация успешна, но вход не удался. Пожалуйста, войдите вручную.';
+                    errorMessage.classList.remove('d-none');
+                }
+            } else {
+                let errorText = '';
+                if (data.username) {
+                    errorText += data.username.join(' ') + ' ';
+                }
+                if (data.email) {
+                    errorText += data.email.join(' ') + ' ';
+                }
+                if (data.password1) {
+                    errorText += data.password1.join(' ') + ' ';
+                }
+                if (data.password2) {
+                    errorText += data.password2.join(' ') + ' ';
+                }
+                if (data.non_field_errors) {
+                    errorText += data.non_field_errors.join(' ');
+                }
+                
+                errorMessage.textContent = errorText || 'Ошибка регистрации';
+                errorMessage.classList.remove('d-none');
+            }
+        } catch (error) {
+            errorMessage.textContent = 'Ошибка соединения с сервером';
+            errorMessage.classList.remove('d-none');
+        } finally {
+            registerText.classList.remove('d-none');
+            registerSpinner.classList.add('d-none');
+            registerBtn.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}

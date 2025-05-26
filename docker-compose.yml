@@ -1,0 +1,47 @@
+networks:
+  custom-network:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:16.8
+    container_name: twitcher-postgres
+    env_file:
+      - .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - custom-network
+    ports:
+      - '5435:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+
+  twitcher-auth:
+    build: .
+    container_name: twitcher-django-auth
+    volumes:
+      - ./twitcher/:/twitcher
+      - static_volume:/twitcher/static
+      - media_volume:/twitcher/media
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      bash -c "python manage.py collectstatic --noinput && 
+      python manage.py migrate && 
+      python manage.py runserver 0.0.0.0:80"
+    networks:
+      - custom-network
+    ports:
+      - "80:80"
+
+volumes:
+  static_volume:
+  media_volume:
+  pg_data:
