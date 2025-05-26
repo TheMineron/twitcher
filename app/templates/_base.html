@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Twitcher{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-gray-800">
+
+<header class="bg-blue-600 text-white p-4 shadow">
+  <div class="max-w-6xl mx-auto flex justify-between items-center">
+    <a href="/news">
+      <h1 class="text-2xl font-bold">Twitcher</h1>
+    </a>
+
+    <div class="flex items-center space-x-4">
+      {% if user %}
+        <a href="/feed/me" class="font-medium">@{{ user.username }}</a>
+        <a href="/auth/logout">Выйти</a>
+      {% else %}
+        <a href="/auth/login">Войти</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+{% block content %}{% endblock %}
+<div id="repost-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg p-6 w-full max-w-md">
+    <h3 class="text-xl font-semibold mb-4">Создать репост</h3>
+    <form id="repost-form" enctype="multipart/form-data">
+      <input type="hidden" id="original-post-id" name="original_post_id">
+      <textarea
+              name="content"
+              rows="4"
+              placeholder="Добавьте комментарий к репосту..."
+              class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none mb-4"
+      ></textarea>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Добавить изображение</label>
+        <input
+                type="file"
+                name="image"
+                accept="image/*"
+                class="block w-full text-sm text-gray-500
+            file:mr-4 file:py-2 file:px-4
+            file:rounded-md file:border-0
+            file:text-sm file:font-semibold
+            file:bg-blue-50 file:text-blue-700
+            hover:file:bg-blue-100"
+        >
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button
+                type="button"
+                onclick="closeRepostModal()"
+                class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100"
+        >
+          Отмена
+        </button>
+        <button
+                type="submit"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Опубликовать
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+    function openRepostModal(postId) {
+        document.getElementById('original-post-id').value = postId;
+        document.getElementById('repost-modal').classList.remove('hidden');
+    }
+
+    function closeRepostModal() {
+        document.getElementById('repost-modal').classList.add('hidden');
+        document.getElementById('repost-form').reset();
+    }
+
+    document.getElementById('repost-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const button = this.querySelector('button[type="submit"]');
+
+        button.disabled = true;
+
+        try {
+            const response = await fetch(`/posts`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                closeRepostModal();
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('Error creating repost:', error);
+        } finally {
+            button.disabled = false;
+        }
+    });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

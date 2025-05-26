@@ -1,0 +1,179 @@
+{% extends "_base.html" %}
+
+{% block title %}Twitcher | Пост @{{ post.author.username }}{% endblock %}
+{% block content %}
+  <div class="max-w-3xl mx-auto mt-6 p-4 space-y-6">
+    <!-- Кнопка назад -->
+    <a href="{{ request.headers.get('referer', '/feed') }}"
+       class="inline-flex items-center text-blue-500 hover:underline">
+      ← Назад
+    </a>
+
+    <!-- Основной пост -->
+    <div class="bg-white border border-gray-300 p-4 rounded-lg shadow-sm">
+      <div class="flex items-start gap-3">
+        <a href="/feed/user/{{ post.author.id }}">
+          <img src="/static/img/default-avatar.jpg"
+               class="rounded-full"
+               alt="Avatar"
+               width="50"
+               height="50">
+        </a>
+        <div class="flex-1">
+          <div class="flex justify-between">
+            <div>
+              <a href="/feed/user/{{ post.author.id }}" class="hover:underline">
+                <h4 class="font-semibold">{{ post.author.first_name }} {{ post.author.last_name }}</h4>
+              </a>
+              <a href="/feed/user/{{ post.author.id }}" class="hover:underline">
+                <p class="text-sm text-gray-500">@{{ post.author.username }}</p>
+              </a>
+            </div>
+            <span class="text-sm text-gray-400">{{ post.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+          </div>
+
+          {% if post.reposted_from %}
+            <div class="bg-gray-50 p-3 mt-2 rounded border-l-4 border-blue-200">
+              <a href="/posts/{{ post.reposted_from.id }}" class="hover:underline">
+                <p class="text-sm text-gray-600">
+                  Репост от {{ post.reposted_from.author.first_name }} {{ post.reposted_from.author.last_name }}
+                </p>
+                <p class="mt-1">{{ post.reposted_from.content }}</p>
+                <p class="text-xs text-gray-400 mt-1">
+                  {{ post.reposted_from.created_at.strftime('%d.%m.%Y %H:%M') }}
+                </p>
+              </a>
+            </div>
+          {% endif %}
+
+          <p class="mt-2">{{ post.content }}</p>
+
+          {% if post.image %}
+            <img src="{{ post.image }}" alt="Post image" class="mt-2 rounded-lg w-full">
+          {% endif %}
+
+          <div class="flex gap-4 text-sm text-gray-600 mt-3">
+            <button class="flex items-center gap-1 hover:text-red-500"
+                    onclick="event.stopPropagation(); toggleLike({{ post.id }}, this)">
+              {% if user.id in post.likes|map(attribute='user_id') %}
+                <span>❤️</span> <span class="like-count">{{ post.likes_count }}</span>
+              {% else %}
+                <span>🖤</span><span class="like-count">{{ post.likes_count }}</span>
+              {% endif %}
+            </button>
+            <a href="/posts/{{ post.id }}#comments" class="flex items-center gap-1 hover:text-blue-500"
+               onclick="event.stopPropagation()">
+              💬 {{ post.comments_count }}
+            </a>
+            <button class="flex items-center gap-1 hover:text-green-500"
+                    onclick="event.stopPropagation(); openRepostModal({{ post.id }})">
+              ↻ <span class="repost-count">{{ post.reposts_count }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Комментарии -->
+    <div id="comments" class="space-y-4">
+      <h3 class="text-xl font-semibold">Комментарии</h3>
+
+      <!-- Форма добавления комментария -->
+      <div class="bg-white border border-gray-300 p-4 rounded-lg shadow-sm">
+        <form id="comment-form-{{ post.id }}" class="comment-form"
+              data-post-id="{{ post.id }}">
+        <textarea
+                name="content"
+                rows="2"
+                placeholder="Добавить комментарий..."
+                class="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                required
+        ></textarea>
+          <div class="text-right mt-2">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded-lg hover:bg-blue-700">
+              Отправить
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Список комментариев -->
+      {% for comment in comments %}
+        <div class="bg-white border border-gray-300 p-3 rounded-lg shadow-sm">
+          <div class="flex items-start gap-3">
+            <a href="/feed/user/{{ comment.author.id }}">
+              <img src="/static/img/default-avatar.jpg"
+                   class="rounded-full"
+                   alt="Avatar"
+                   width="40"
+                   height="40">
+            </a>
+            <div class="flex-1">
+              <div class="flex justify-between">
+                <a href="/feed/user/{{ comment.author.id }}" class="hover:underline">
+                  <h4 class="font-medium">{{ comment.author.first_name }} {{ comment.author.last_name }}</h4>
+                </a>
+                <span class="text-xs text-gray-400">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+              </div>
+              <p class="mt-1">{{ comment.content }}</p>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}
+{% block scripts %}
+  <script>
+      document.addEventListener('DOMContentLoaded', function () {
+          document.querySelectorAll('.comment-form').forEach(form => {
+              form.addEventListener('submit', async function (e) {
+                  e.preventDefault();
+
+                  const postId = this.dataset.postId;
+                  const formData = new FormData(this);
+                  const button = this.querySelector('button[type="submit"]');
+
+                  button.disabled = true;
+                  button.classList.add('opacity-50');
+
+                  try {
+                      const response = await fetch(`/posts/${postId}/comments`, {
+                          method: 'POST',
+                          body: formData
+                      });
+
+                      if (response.ok) {
+                          window.location.reload();
+                      }
+                  } catch (error) {
+                      console.error('Error submitting comment:', error);
+                  } finally {
+                      button.disabled = false;
+                      button.classList.remove('opacity-50');
+                  }
+              });
+          });
+      });
+
+      async function toggleLike(postId, button) {
+          const likeIcon = button.querySelector('span:first-child');
+          const likeCount = button.querySelector('.like-count');
+          const isLiked = likeIcon.textContent === '❤️';
+
+          try {
+              const response = isLiked
+                  ? await fetch(`/posts/${postId}/likes`, {method: 'DELETE'})
+                  : await fetch(`/posts/${postId}/likes`, {method: 'POST'});
+
+              if (response.ok) {
+                  const result = await response.json();
+                  likeIcon.textContent = isLiked ? '🖤' : '❤️';
+                  likeCount.textContent = result.new_count;
+              }
+          } catch (error) {
+              console.error('Error toggling like:', error);
+          }
+      }
+  </script>
+{% endblock %}

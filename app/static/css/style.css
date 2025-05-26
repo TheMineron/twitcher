@@ -1,0 +1,66 @@
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+header {
+    background: #f4f4f4;
+    padding: 1rem;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    gap: 1rem;
+}
+
+nav a {
+    text-decoration: none;
+    color: #333;
+}
+
+main {
+    padding: 2rem;
+}
+
+footer {
+    background: #f4f4f4;
+    text-align: center;
+    padding: 1rem;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+.auth-info {
+    margin-top: 2rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+#repost-modal {
+    transition: opacity 0.3s ease;
+}
+
+#repost-modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
